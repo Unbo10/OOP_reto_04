@@ -1,13 +1,11 @@
-def swap(a, b):
-   return b, a
-
+import math
 class Vertex:
    def __init__(self, given_x, given_y) -> None:
       self.x = given_x
       self.y = given_y
    
-   def calculate_vertex_distance (self, vert):
-      return (((self.x - vert.x)**2) + ((self.y - vert.y)**2))**1/2
+   def calculate_vertex_distance (self, vert) -> float:
+      return math.sqrt(((self.x - vert.x)**2) + ((self.y - vert.y)**2))
    
 class Edge: 
    def __init__(self, v1: Vertex, v2: Vertex) -> None:
@@ -15,28 +13,35 @@ class Edge:
       self.end = v2
       self.length = v1.calculate_vertex_distance(v2)
       self.slope = (v2.y - v1.y) / (v2.x - v1.x)
+      self.vector_end: Vertex = Vertex(v2.x - v1.x, v2.y - v1.y)
+      self.vector_start: Vertex = Vertex(v1.x - v2.x, v1.y - v2.y)
 
 class Shape:
    def __init__(self, *args) -> None:
-      self.is_regular: bool = False
-      self.n_sides: int = len(args)
-      temporary_vertices: list = list(args)
-      self.vertices: list = self.sort_vertices(temporary_vertices)
-      self.edges: list = self.create_edges()
-      self.print_shape_vertices()
-      self.print_shape_edges()
+      self._n_sides: int = len(args)
+      self._vertices: list = self._create_vertices(list(args))
+      self._edges: list = self._create_edges()
+      self.get_shape_vertices() # ! Don't forget to comment it
+      self._inner_angles: list = self._compute_inner_angles()
+      self._is_regular: bool = self._is_shape_regular()
+      self._area: float = None
+      self._perimeter: float = None
+      # self.get_shape_edges()
 
-   def print_shape_vertices(self) -> None:
-      for i in self.vertices:
+   def get_shape_vertices(self) -> None:
+      for i in self._vertices:
          print("(", i.x, ",", i.y, ")", end="; ")
       print()
 
-   def print_shape_edges(self) -> None:
-      for i in self.edges:
+   def get_shape_edges(self) -> None:
+      for i in self._edges:
          print("(", i.start.x, ",", i.start.y, ")", "(", i.end.x, ",", i.end.y, ")", end="; ")
       print()
 
-   def eliminate_repeated_vertices(self, vertices_giv):
+   def get_inner_angles(self):
+      pass   
+
+   def _eliminate_repeated_vertices(self, vertices_giv):
       """Method to remove vertices with the same x and same y coordinates"""
 
       count = 0
@@ -51,7 +56,7 @@ class Shape:
 
       return vertices_giv
    
-   def sort_not_passed_vertices(self, m: Vertex, vertices_giv: list) -> list:
+   def _sort_not_passed_vertices(self, m: Vertex, vertices_giv: list) -> list:
       """Method to sort the vertices that have not been passed yet, that is, that have not been sorted yet. It will sort them in descending order of x coordinate. This is done to avoid positioning a vertex as the following of another vertex although is not the immediately following one."""
 
       m_pos = vertices_giv.index(m) # * Position of last min or max
@@ -65,17 +70,16 @@ class Shape:
          i += 1
       return vertices_giv
 
-   def sort_vertices(self, vertices_giv):
-      vertices_giv = self.eliminate_repeated_vertices(vertices_giv)
-      self.n_sides = len(vertices_giv)
-      self.vertices = vertices_giv
+   def _create_vertices(self, vertices_giv):
+      vertices_giv = self._eliminate_repeated_vertices(vertices_giv)
 
+      # * The following block of code defines the min_y and max_y vertices, which will be, respectively, the bottom and top vertices of the polygon. However, since there could be same-y coordinate vertices, there may be two top and/or bottom vertices. Therefore, those are grouped into two different list that are candidates for bottom and top vertices, and the list is then sorted according to the x coordinate of the vertices, and, taking into account the polygon is being built clockwise, the top one should be the one with the smallest x coordinate and the bottom should have the biggest x coordinate of the candidates.
       vertices_giv = sorted(vertices_giv, key = lambda vertex: vertex.y)
       min_y_candidates: list = []
       max_y_candidates: list = []
       min_y_candidates.append(vertices_giv[0])
-      max_y_candidates.append(vertices_giv[self.n_sides - 1])
-      self.print_shape_vertices()
+      max_y_candidates.append(vertices_giv[len(vertices_giv) - 1])
+      # self.get_shape_vertices()
       i = 0
       for i in vertices_giv:
          if (i.y == min_y_candidates[0].y) and (i.x != min_y_candidates[0].x):
@@ -87,13 +91,13 @@ class Shape:
       max_y_candidates = sorted(max_y_candidates, key = lambda vertex: vertex.x)
       min_y: Vertex = min_y_candidates[len(min_y_candidates) - 1]
       max_y: Vertex = max_y_candidates[0]
-      print("min_y:", min_y.x, min_y.y, "max_y:", max_y.x, max_y.y)
 
+      # * An analogous process is done for the right-most and left-most vertices.
       vertices_giv = sorted(vertices_giv, key = lambda vertex: vertex.x)
       min_x_candidates: list = []
       max_x_candidates: list = []
       min_x_candidates.append(vertices_giv[0])
-      max_x_candidates.append(vertices_giv[self.n_sides - 1])
+      max_x_candidates.append(vertices_giv[len(vertices_giv) - 1])
       for i in vertices_giv:
          if (i.x == min_x_candidates[0].x) and (i.y != min_x_candidates[0].y):
             min_x_candidates.append(i)
@@ -104,6 +108,7 @@ class Shape:
       max_x_candidates = sorted(max_x_candidates, key = lambda vertex: vertex.y)
       min_x: Vertex = min_x_candidates[0]
       max_x: Vertex = max_x_candidates[len(max_x_candidates) - 1]
+      print("min_y:", min_y.x, min_y.y, "max_y:", max_y.x, max_y.y)
       print("min_x: ", min_x.x, min_x.y, "max_x: ", max_x.x, max_x.y)
 
       vertices_giv = sorted(vertices_giv, key = lambda vertex: vertex.x)
@@ -115,130 +120,292 @@ class Shape:
       following_found: bool = False
       # * The following vertex will be the one that fulfills certain conditions depending on the current vertex and the passed condition. That way, the vertices will be sorted in a clockwise manner.
 
-      self.vertices = vertices_giv
-      self.print_shape_vertices() 
+      # self._vertices = vertices_giv
+      # self.get_shape_vertices() 
       while passed != 4:
          if passed == 0:
-               while (passed == 0):
-                  if vertices_giv[i] == max_y:
-                     passed += 1
-                  else:
-                     j = i + 1
-                     following_found = False
-                     while following_found == False:
-                           if vertices_giv[j] == max_y:
-                              following_found = True
-                              vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                              i += 1
-                           elif (vertices_giv[j].y >= vertices_giv[i].y) and (vertices_giv[j].x >= vertices_giv[i].x):
-                              vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                              following_found = True
-                              i += 1
-                              j = i + 1                            
-                           else:
-                              j += 1
+            # * The first vertex to be passed is the one with the maximum y coordinate
+            while (passed == 0):
+               if vertices_giv[i] == max_y:
+                  passed += 1
+               else:
+                  j = i + 1
+                  following_found = False
+                  while following_found == False:
+                     print(i, j)
+                     self._vertices = vertices_giv
+                     self.get_shape_vertices()
+                     if vertices_giv[j] == max_y:
+                        following_found = True
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                     elif (vertices_giv[j].y > vertices_giv[i].y) and (vertices_giv[j].x >= vertices_giv[i].x):
+                        # * the first condition tested in all cases needs to be strictly greater or smaller so the polygon is convex
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        following_found = True
+                        i += 1
+                        j = i + 1                            
+                     else:
+                           j += 1
 
          elif passed == 1:
-               vertices_giv = self.sort_not_passed_vertices(max_y, vertices_giv)
-               while (passed == 1):
-                  if vertices_giv[i] == max_x:
-                     passed += 1
-                  else:
-                     j = i + 1
-                     following_found = False
-                     while following_found == False:
-                        if vertices_giv[j] == max_x:
-                           following_found = True
-                           vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                           i += 1
-
-                        elif (vertices_giv[j].x >= vertices_giv[i].x) and (vertices_giv[j].y <= vertices_giv[i].y):
-                           vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                           i += 1
-                           j += 1
-                           following_found = True
-                        else:
-                           j += 1                            
+            # * The second vertex to be passed is the one with the maximum x coordinate
+            vertices_giv = self._sort_not_passed_vertices(max_y, vertices_giv)
+            while (passed == 1):
+               if vertices_giv[i] == max_x:
+                  passed += 1
+               else:
+                  j = i + 1
+                  following_found = False
+                  while following_found == False:
+                     print(i, j, passed) # ! Check for rectangle: 4,0 passes as the following even though it should be 4,3
+                     self._vertices = vertices_giv
+                     self.get_shape_vertices()
+                     if vertices_giv[j] == max_x:
+                        following_found = True
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                     elif (vertices_giv[j].x > vertices_giv[i].x) and (vertices_giv[j].y <= vertices_giv[i].y):
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                        j += 1
+                        following_found = True
+                     else:
+                        j += 1                            
          
          elif passed == 2:
-               vertices_giv = self.sort_not_passed_vertices(max_x, vertices_giv)
-               while (passed == 2):
-                  if vertices_giv[i] == min_y:
-                     passed += 1
-                  else:
-                     j = i + 1
-                     following_found = False
-                     while following_found == False:
-                           if vertices_giv[j] == min_y:
-                              following_found = True
-                              vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                              i += 1
-                           elif (vertices_giv[j].y <= vertices_giv[i].y) and (vertices_giv[j].x <= vertices_giv[i].x):
-                              vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                              i += 1
-                              j += 1
-                              following_found = True
-                           else:
-                              j += 1
+            # * The third vertex to be passed is the one with the minimum y coordinate
+            vertices_giv = self._sort_not_passed_vertices(max_x, vertices_giv)
+            while (passed == 2):
+               if vertices_giv[i] == min_y:
+                  passed += 1
+               else:
+                  j = i + 1
+                  following_found = False
+                  while following_found == False:
+                     self._vertices = vertices_giv
+                     self.get_shape_vertices()
+                     if vertices_giv[j] == min_y:
+                        following_found = True
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                     elif (vertices_giv[j].y < vertices_giv[i].y) and (vertices_giv[j].x <= vertices_giv[i].x):
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                        j += 1
+                        following_found = True
+                     else:
+                        j += 1
 
          elif passed == 3:
-               vertices_giv = self.sort_not_passed_vertices(min_y, vertices_giv)
-               while (passed == 3):
-                  if i == self.n_sides - 1:
-                     passed += 1
-                  else:
-                     j = i + 1
-                     following_found = False
-                     while following_found == False:
-                           if i == self.n_sides - 1:
-                              following_found = True
-                              passed += 1
-                           elif (vertices_giv[j].x <= vertices_giv[i].x) and (vertices_giv[j].y >= vertices_giv[i].y):
-                              vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
-                              i += 1
-                              j += 1
-                              following_found = True
-                           else:
-                              j += 1
-                           
+            # * The fourth vertex to be passed is the last one before the vertex with the minimum x coordinate, so that the last edge is formed by the last vertex and the first one.
+            vertices_giv = self._sort_not_passed_vertices(min_y, vertices_giv)
+            while (passed == 3):
+               if i == len(vertices_giv) - 1:
+                  passed += 1
+               else:
+                  j = i + 1
+                  following_found = False
+                  while following_found == False:
+                     if i == len(vertices_giv) - 1:
+                        following_found = True
+                        passed += 1
+                     elif (vertices_giv[j].x < vertices_giv[i].x) and (vertices_giv[j].y >= vertices_giv[i].y):
+                        vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
+                        i += 1
+                        j += 1
+                        following_found = True
+                     else:
+                        j += 1
+      # self._vertices = vertices_giv
+      # self.get_shape_vertices() 
+                                    
       return vertices_giv
    
-   def create_edges(self):
+   def _create_edges(self):
+      """Method to create the edges of the polygon. In doing so it removes the vertices that are contained in the edge defined by the following and previous vertices. This is done to avoid having two edges that are in reality one."""
       edges: list = []
       i = 0
-      while i < len(self.vertices) - 1:
-         edges.append(Edge(self.vertices[i], self.vertices[i + 1]))
+      while i < len(self._vertices) - 1:
+         # * Each iteration after the first one will check if the previous edge shares the same slope as the current one. If so, it will remove the ending vertex of the previous edge and both the current and previous edge, and create a new edge with the starting vertex of the previous edge and the ending vertex of the current edge. It will stop before accessing a vertex outisde the list.
+
+         edges.append(Edge(self._vertices[i], self._vertices[i + 1]))
          if (i >= 1) and edges[i - 1].slope == edges[i].slope:
-            self.vertices.remove(edges[i - 1].end) # vertices[i]
-            print(len(edges), i)
+            self._vertices.remove(edges[i - 1].end) # * edges[i - 1] = vertices[i]
             edges.remove(edges[i])
             edges.remove(edges[i - 1])
             i -= 1
-            edges.append(Edge(self.vertices[i], self.vertices[i + 1]))
+            edges.append(Edge(self._vertices[i], self._vertices[i + 1]))
          i += 1
       
-      self.n_sides = len(self.vertices)
-
-      # ! Create first the last edge and then check if the previous one is inside it   
-      edges.append(Edge(self.vertices[i], self.vertices[0]))
+      # * Because the last edge is formed by the last vertex and the first one, the last edge is created outside the loop, but the same conditions need to be checked. In this case, though, the last edge will be compared with the following one (the first one overall) and the previous one.
+      edges.append(Edge(self._vertices[i], self._vertices[0]))
       if edges[i].slope == edges[i - 1].slope:
-         self.vertices.remove(edges[i - 1].end)
+         self._vertices.remove(edges[i - 1].end)
          edges.remove(edges[i - 1])
          edges.remove(edges[i])
          i -= 1
-         edges.append(Edge(self.vertices[i], self.vertices[i + 1]))
+         edges.append(Edge(self._vertices[i], self._vertices[i + 1]))
       
       if edges[i].slope == edges[0].slope:
-         self.vertices.remove(edges[i].end)
+         self._vertices.remove(edges[i].end)
          edges.remove(edges[i])
          edges.remove(edges[0])
          i -= 1
-         edges.append(Edge(self.vertices[i], self.vertices[0]))
+         edges.append(Edge(self._vertices[i], self._vertices[0]))
 
-         
+      self._n_sides = len(self._vertices)
+      # print(self._n_sides, len(edges))
+      
       return edges
-         
+
+   def _is_shape_regular(self) -> bool:
+      same_length_count = 0
+      length = self._edges[0].length
+      for e in self._edges:
+         if e.length == length:
+            same_length_count += 1
+         else:
+            return False
+      if same_length_count == self._n_sides: # * Unnecessary but makes the code more robust
+         return True
+
+   def _compute_area(self) -> None:
+      pass
+
+   def _compute_perimeter(self) -> None:
+      """Method to compute the perimeter of the polygon. Using the length attribute of the list of edges that define the polygon."""
+      perimeter = 0
+      for e in self._edges:
+         perimeter += e.length
+      return perimeter      
+
+   def _compute_inner_angles(self) -> list:
+      inner_angles: float = []
+      i = 0
+      while i < len(self._edges) - 1:
+         inner_angles.append(math.acos(((self._edges[i].vector_start.x * self._edges[i + 1].vector_end.x) + (self._edges[i].vector_start.y * self._edges[i + 1].vector_end.y))/(self._edges[i].length * self._edges[i + 1].length)))
+         i += 1
+      inner_angles.append(math.acos(((self._edges[i].vector_start.x * self._edges[0].vector_end.x) + (self._edges[i].vector_start.y * self._edges[0].vector_end.y))/(self._edges[i].length * self._edges[0].length)))
+      inner_angles = [t*(180/math.pi) for t in inner_angles]
+      # self.get_shape_edges()
+      # print(inner_angles)
+      return inner_angles
    
+   def get_area(self) -> float:
+      return self._area
+   
+   def get_perimeter(self) -> float:
+      return self._perimeter
+
+class Rectangle(Shape):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._edges = sorted(self._edges, key = lambda edge: edge.length) # * Guarantees the smallest pair of edges are the first two
+      self.get_shape_edges()
+      self._perimeter = self._compute_perimeter()
+      self._area = self._compute_area()
+
+   def _compute_perimeter(self) -> float:
+      return (self._edges[0].length * 2) + (self._edges[2].length * 2)
+
+   def _compute_area(self) -> float:
+      return self._edges[0].length * self._edges[2].length
+   
+class Square(Rectangle):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._perimeter = self._compute_perimeter()
+      self._area = self._compute_area()
+      # print(self.get_area())
+      # print(self.get_perimeter())
+   
+   def _compute_perimeter(self) -> float:
+      return self._edges[0].length * 4
+   
+   def _compute_area(self) -> float:
+      return self._edges[0].length**2
+
+class Triangle(Shape):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+
+class Isosceles(Triangle):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._base, self._equal_edges = self._compute_base_and_equal_edges()
+      self._area = self._compute_area()
+      self._perimeter = self._compute_perimeter()
+      # print(self.get_area())
+      # print(self.get_perimeter())
+   
+   def _compute_base_and_equal_edges(self) -> Edge:
+      equal_pairs = sorted(self._edges, key = lambda edge: edge.length)
+      base: Edge = Vertex(0, 0)
+      if equal_pairs[0].length != equal_pairs[1].length:
+         base = equal_pairs[0]
+         equal_pairs.remove(equal_pairs[0])
+      else:
+         base = equal_pairs[2]
+         equal_pairs.remove(equal_pairs[2])
+      return base, equal_pairs
+   
+   def _compute_area(self) -> float:
+      height = math.sqrt((self._equal_edges[0].length**2) - ((self._base.length/2)**2))
+      return ((self._base.length * height) / 2)
+
+   def _compute_perimeter(self) -> float:
+      return (self._equal_edges[0].length * 2) + self._base.length
+      
+class Equilateral(Triangle):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._perimeter = self._compute_perimeter()
+      self._area = self._compute_area()
+      # print(self.get_area())
+      # print(self.get_perimeter())
+   
+   def _compute_perimeter(self) -> float:
+      return self._edges[0].length * 3
+
+   def _compute_area(self) -> float:
+      return ((math.sqrt(3)/4)*(self._edges[0].length**2))
+   
+class Scalene(Triangle):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._semi_perimeter = self._compute_semi_perimeter()
+      self._perimeter = self._compute_perimeter() * 2
+      self._area = self._compute_area()
+      # print(self.get_area())
+      # print(self.get_perimeter())
+
+   def _compute_semi_perimeter(self) -> float:
+      sum_of_edge_lengths = 0
+      for i in self._edges:
+         sum_of_edge_lengths += i.length
+      return sum_of_edge_lengths / 2
+
+   def _compute_area(self) -> float:
+      """This method calculates the area of the triangle using Heron's formula"""
+
+      return math.sqrt(self._semi_perimeter * (self._semi_perimeter - self._edges[0].length) * (self._semi_perimeter - self._edges[1].length) * (self._semi_perimeter - self._edges[2].length))
+
+class RightTriangle(Triangle):
+   def __init__(self, *args) -> None:
+      super().__init__(*args)
+      self._perimeter = self._compute_perimeter()
+      self._area = self._compute_area()
+      # print(self.get_area())
+      # print(self.get_perimeter())
+
+   def _compute_perimeter(self) -> None:
+      return super()._compute_perimeter() # * No special way of doing it so it just adds the edges' lengths
+
+   def _compute_area(self) -> float:
+      self.edges = sorted(self._edges, key = lambda edge: edge.length) # * Guarantees the hypothenuse is the last edge, so the other two will be the legs (catetos)
+      return (self._edges[0].length * self._edges[1].length) / 2
+
 if __name__ == "__main__":
    v1 = Vertex(2, -1)
    v2 = Vertex(3, -1)
@@ -251,4 +418,15 @@ if __name__ == "__main__":
    v9 = Vertex(12, 4)
    v10 = Vertex(10, 10)
    v11 = Vertex(10, 10)
-   shape1 = Shape(v1, v2, v3, v4) # ! Triangle: error. Probably has to do with a vertex being max and max or min and min
+   shape1 = Shape(v1, v3, v3, v4, v5, v6, v7, v8, v9, v10, v11)
+
+   v1 = Vertex(0, 0)
+   v2 = Vertex(2, 4)
+   v3 = Vertex(4, 0)
+   shape2 = Isosceles(v1, v2, v3)
+
+   v1 = Vertex(0, 0)
+   v2 = Vertex(0, 3)
+   v3 = Vertex(4, 0)
+   v4 = Vertex(4, 3)
+   shape3 = Rectangle(v1, v2, v3, v4)
