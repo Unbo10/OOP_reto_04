@@ -12,21 +12,27 @@ class Edge:
       self.start = v1
       self.end = v2
       self.length = v1.calculate_vertex_distance(v2)
-      self.slope = (v2.y - v1.y) / (v2.x - v1.x)
+      self.slope = self._compute_slope()
       self.vector_end: Vertex = Vertex(v2.x - v1.x, v2.y - v1.y)
       self.vector_start: Vertex = Vertex(v1.x - v2.x, v1.y - v2.y)
+
+   def _compute_slope(self) -> float:
+      if (self.end.x - self.start.x) == 0:
+         return None
+      else:
+         return (self.end.y - self.start.y) / (self.end.x - self.start.x)
 
 class Shape:
    def __init__(self, *args) -> None:
       self._n_sides: int = len(args)
       self._vertices: list = self._create_vertices(list(args))
+      # self.get_shape_vertices()
       self._edges: list = self._create_edges()
-      self.get_shape_vertices() # ! Don't forget to comment it
+      # self.get_shape_edges()
       self._inner_angles: list = self._compute_inner_angles()
       self._is_regular: bool = self._is_shape_regular()
       self._area: float = None
       self._perimeter: float = None
-      # self.get_shape_edges()
 
    def get_shape_vertices(self) -> None:
       for i in self._vertices:
@@ -56,18 +62,43 @@ class Shape:
 
       return vertices_giv
    
-   def _sort_not_passed_vertices(self, m: Vertex, vertices_giv: list) -> list:
-      """Method to sort the vertices that have not been passed yet, that is, that have not been sorted yet. It will sort them in descending order of x coordinate. This is done to avoid positioning a vertex as the following of another vertex although is not the immediately following one."""
+   def _sort_not_passed_vertices(self, m: Vertex, vertices_giv: list, passed: str) -> list:
+      """Method to sort the vertices that have not been passed yet, that is, that have not been sorted yet. This is done to avoid positioning a vertex as the following of another vertex although is not the immediately following one."""
 
       m_pos = vertices_giv.index(m) # * Position of last min or max
       i = m_pos + 1
-      while i < len(vertices_giv):
-         j = i + 1
-         while j < len(vertices_giv):
-            if vertices_giv[i].x < vertices_giv[j].x:
-               vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
-            j += 1
-         i += 1
+      if passed == "max_y":
+         while i < len(vertices_giv):
+            j = i + 1
+            while j < len(vertices_giv):
+               if vertices_giv[i].x < vertices_giv[j].x:
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               elif (vertices_giv[i].x == vertices_giv[j].x) and (vertices_giv[j].y > vertices_giv[i].y):
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               j += 1
+            i += 1
+
+      if passed == "max_x":
+         while i < len(vertices_giv):
+            j = i + 1
+            while j < len(vertices_giv):
+               if vertices_giv[i].x < vertices_giv[j].x:
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               elif (vertices_giv[i].x == vertices_giv[j].x) and (vertices_giv[j].y < vertices_giv[i].y):
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               j += 1
+            i += 1
+
+      if passed == "min_y":
+         while i < len(vertices_giv):
+            j = i + 1
+            while j < len(vertices_giv):
+               if vertices_giv[i].x < vertices_giv[j].x:
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               elif (vertices_giv[i].x == vertices_giv[j].x) and (vertices_giv[j].y > vertices_giv[i].y):
+                  vertices_giv[i], vertices_giv[j] = vertices_giv[j], vertices_giv[i]
+               j += 1
+            i += 1
       return vertices_giv
 
    def _create_vertices(self, vertices_giv):
@@ -79,7 +110,6 @@ class Shape:
       max_y_candidates: list = []
       min_y_candidates.append(vertices_giv[0])
       max_y_candidates.append(vertices_giv[len(vertices_giv) - 1])
-      # self.get_shape_vertices()
       i = 0
       for i in vertices_giv:
          if (i.y == min_y_candidates[0].y) and (i.x != min_y_candidates[0].x):
@@ -108,8 +138,8 @@ class Shape:
       max_x_candidates = sorted(max_x_candidates, key = lambda vertex: vertex.y)
       min_x: Vertex = min_x_candidates[0]
       max_x: Vertex = max_x_candidates[len(max_x_candidates) - 1]
-      print("min_y:", min_y.x, min_y.y, "max_y:", max_y.x, max_y.y)
-      print("min_x: ", min_x.x, min_x.y, "max_x: ", max_x.x, max_x.y)
+      # print("min_y:", min_y.x, min_y.y, "max_y:", max_y.x, max_y.y)
+      # print("min_x: ", min_x.x, min_x.y, "max_x: ", max_x.x, max_x.y)
 
       vertices_giv = sorted(vertices_giv, key = lambda vertex: vertex.x)
 
@@ -132,9 +162,6 @@ class Shape:
                   j = i + 1
                   following_found = False
                   while following_found == False:
-                     print(i, j)
-                     self._vertices = vertices_giv
-                     self.get_shape_vertices()
                      if vertices_giv[j] == max_y:
                         following_found = True
                         vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
@@ -150,7 +177,7 @@ class Shape:
 
          elif passed == 1:
             # * The second vertex to be passed is the one with the maximum x coordinate
-            vertices_giv = self._sort_not_passed_vertices(max_y, vertices_giv)
+            vertices_giv = self._sort_not_passed_vertices(max_y, vertices_giv, "max_y")
             while (passed == 1):
                if vertices_giv[i] == max_x:
                   passed += 1
@@ -158,9 +185,6 @@ class Shape:
                   j = i + 1
                   following_found = False
                   while following_found == False:
-                     print(i, j, passed) # ! Check for rectangle: 4,0 passes as the following even though it should be 4,3
-                     self._vertices = vertices_giv
-                     self.get_shape_vertices()
                      if vertices_giv[j] == max_x:
                         following_found = True
                         vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
@@ -175,7 +199,7 @@ class Shape:
          
          elif passed == 2:
             # * The third vertex to be passed is the one with the minimum y coordinate
-            vertices_giv = self._sort_not_passed_vertices(max_x, vertices_giv)
+            vertices_giv = self._sort_not_passed_vertices(max_x, vertices_giv, "max_x")
             while (passed == 2):
                if vertices_giv[i] == min_y:
                   passed += 1
@@ -183,8 +207,6 @@ class Shape:
                   j = i + 1
                   following_found = False
                   while following_found == False:
-                     self._vertices = vertices_giv
-                     self.get_shape_vertices()
                      if vertices_giv[j] == min_y:
                         following_found = True
                         vertices_giv[i + 1], vertices_giv[j] = vertices_giv[j], vertices_giv[i + 1]
@@ -199,7 +221,7 @@ class Shape:
 
          elif passed == 3:
             # * The fourth vertex to be passed is the last one before the vertex with the minimum x coordinate, so that the last edge is formed by the last vertex and the first one.
-            vertices_giv = self._sort_not_passed_vertices(min_y, vertices_giv)
+            vertices_giv = self._sort_not_passed_vertices(min_y, vertices_giv, "min_y")
             while (passed == 3):
                if i == len(vertices_giv) - 1:
                   passed += 1
@@ -301,16 +323,16 @@ class Shape:
 class Rectangle(Shape):
    def __init__(self, *args) -> None:
       super().__init__(*args)
-      self._edges = sorted(self._edges, key = lambda edge: edge.length) # * Guarantees the smallest pair of edges are the first two
-      self.get_shape_edges()
+      self._ordered_edges = sorted(self._edges, key = lambda edge: edge.length) # * Guarantees the smallest pair of edges are the first two
+      # self.get_shape_edges()
       self._perimeter = self._compute_perimeter()
       self._area = self._compute_area()
 
    def _compute_perimeter(self) -> float:
-      return (self._edges[0].length * 2) + (self._edges[2].length * 2)
+      return (self._ordered_edges[0].length * 2) + (self._ordered_edges[2].length * 2)
 
    def _compute_area(self) -> float:
-      return self._edges[0].length * self._edges[2].length
+      return self._ordered_edges[0].length * self._ordered_edges[2].length
    
 class Square(Rectangle):
    def __init__(self, *args) -> None:
@@ -407,26 +429,161 @@ class RightTriangle(Triangle):
       return (self._edges[0].length * self._edges[1].length) / 2
 
 if __name__ == "__main__":
-   v1 = Vertex(2, -1)
-   v2 = Vertex(3, -1)
-   v3 = Vertex(3.5, -1)
-   v4 = Vertex(9, 0)
-   v5 = Vertex(7, -1.25)
-   v6 = Vertex(10, 2)
-   v7 = Vertex(1, 3)
-   v8 = Vertex(2, 6)
-   v9 = Vertex(12, 4)
-   v10 = Vertex(10, 10)
-   v11 = Vertex(10, 10)
-   shape1 = Shape(v1, v3, v3, v4, v5, v6, v7, v8, v9, v10, v11)
+   # v1 = Vertex(2, -1)
+   # v2 = Vertex(3, -1)
+   # v3 = Vertex(3.5, -1)
+   # v4 = Vertex(9, 0)
+   # v5 = Vertex(7, -1.25)
+   # v6 = Vertex(10, 2)
+   # v7 = Vertex(1, 3)
+   # v8 = Vertex(2, 6)
+   # v9 = Vertex(12, 4)
+   # v10 = Vertex(10, 10)
+   # v11 = Vertex(10, 10)
+   # shape1 = Shape(v1, v3, v3, v4, v5, v6, v7, v8, v9, v10, v11)
 
-   v1 = Vertex(0, 0)
-   v2 = Vertex(2, 4)
-   v3 = Vertex(4, 0)
-   shape2 = Isosceles(v1, v2, v3)
+   # v1 = Vertex(0, 0)
+   # v2 = Vertex(2, 4)
+   # v3 = Vertex(4, 0)
+   # shape2 = Isosceles(v1, v2, v3)
 
-   v1 = Vertex(0, 0)
-   v2 = Vertex(0, 3)
-   v3 = Vertex(4, 0)
-   v4 = Vertex(4, 3)
-   shape3 = Rectangle(v1, v2, v3, v4)
+   # v1 = Vertex(0, 0)
+   # v2 = Vertex(0, 3)
+   # v3 = Vertex(4, 0)
+   # v4 = Vertex(4, 3)
+   # shape3 = Rectangle(v1, v2, v3, v4)
+
+   print("Hello! This is a program to create a convex shape")
+   print("Let's create a convex shape with more than 4 sides first! (if you wish to do so, enter y, otherwhise enter n)")
+   # choice = str(input(""))
+   # given_vertices: list = []
+   # if choice == "y":
+   #    conti = True
+   #    while conti == True:
+   #       x1 = float(input("Please insert the x coordinate of a vertex of the shape: "))
+   #       x2 = float(input("Please insert the y coordinate of a vertex of the shape: "))
+   #       given_vertices.append(Vertex(x1, x2))
+   #       choice = str(input("To stop entering vertices enter s, otherwise, press enter: "))
+   #       if choice == "s":
+   #          conti = False
+   #       else:
+   #          pass
+   #    shape = Shape(given_vertices)
+   # elif choice == "n":
+   #    pass
+
+   print("Now let's create an isosceles triangle! (one with two sides of equal length):")
+   print("Note: PLEASE insert the triangle vertices with the base below the top vertex when seen in a cartesian plane")
+   x1 = float(input("Enter the x coordinate of the first vertex of the triangle: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the triangle: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the triangle: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the triangle: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the triangle: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the triangle: "))
+   isosceles = Isosceles(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3))
+   print("The vertices are: ", end="")
+   isosceles.get_shape_vertices()
+   print("The edges are: ", end="")
+   isosceles.get_shape_edges()
+   print("The inner angles are: ", end="")
+   isosceles.get_inner_angles()
+   print("The area of the triangle is:", isosceles.get_area())
+   print("The perimeter of the triangle is:", isosceles.get_perimeter())
+   print()
+
+   print("Now let's create an equilateral triangle! (one with all of its sides of the same length)")
+   x1 = float(input("Enter the x coordinate of the first vertex of the triangle: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the triangle: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the triangle: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the triangle: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the triangle: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the triangle: "))
+   equilateral = Equilateral(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3))
+   print("The vertices are: ", end="")
+   equilateral.get_shape_vertices()
+   print("The edges are: ", end="")
+   equilateral.get_shape_edges()
+   print("The inner angles are: ", end="")
+   equilateral.get_inner_angles()
+   print("The area of the triangle is:", equilateral.get_area())
+   print("The perimeter of the triangle is:", equilateral.get_perimeter())
+   print()
+
+   print("Now, let's create an scalene triangle! (one with all of its sides of different length)")
+   print("Note: PLEASE insert the triangle vertices knowing that the bottom edge must have a slope of 0")
+   x1 = float(input("Enter the x coordinate of the first vertex of the triangle: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the triangle: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the triangle: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the triangle: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the triangle: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the triangle: "))
+   scalene = Scalene(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3))
+   print("The vertices are: ", end="")
+   scalene.get_shape_vertices()
+   print("The edges are: ", end="")
+   scalene.get_shape_edges()
+   print("The inner angles are: ", end="")
+   scalene.get_inner_angles()
+   print("The area of the triangle is:", scalene.get_area())
+   print("The perimeter of the triangle is:", scalene.get_perimeter())
+   print()
+
+   print("Now, let's create a right triangle! (one with a right angle, two legs and a hypothenuse)")
+   x1 = float(input("Enter the x coordinate of the first vertex of the triangle: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the triangle: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the triangle: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the triangle: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the triangle: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the triangle: "))
+   rightTriangle = RightTriangle(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3))
+   print("The vertices are: ", end="")
+   rightTriangle.get_shape_vertices()
+   print("The edges are: ", end="")
+   rightTriangle.get_shape_edges()
+   print("The inner angles are: ", end="")
+   rightTriangle.get_inner_angles()
+   print("The area of the triangle is:", rightTriangle.get_area())
+   print("The perimeter of the triangle is:", rightTriangle.get_perimeter())
+   print()
+
+   print("Now, let's create a square! (all of its sides must have the same length)")
+   x1 = float(input("Enter the x coordinate of the first vertex of the square: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the square: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the square: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the square: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the square: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the square: "))
+   x4 = float(input("Enter the x coordinate of the third vertex of the square: "))
+   y4 = float(input("Enter the y coordinate of the third vertex of the square: "))
+   square = Square(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3), Vertex(x4, y4))
+   print("The vertices are: ", end="")
+   square.get_shape_vertices()
+   print("The edges are: ", end="")
+   square.get_shape_edges()
+   print("The inner angles are: ", end="")
+   square.get_inner_angles()
+   print("The area of the square is:", square.get_area())
+   print("The perimeter of the square is:", square.get_perimeter())
+   print()
+
+   print("Now, let's create a rectangle! (a shape with two pairs of sides that must share the same length)")
+   x1 = float(input("Enter the x coordinate of the first vertex of the rectangle: "))
+   y1 = float(input("Enter the y coordinate of the first vertex of the rectangle: "))
+   x2 = float(input("Enter the x coordinate of the second vertex of the rectangle: "))
+   y2 = float(input("Enter the y coordinate of the second vertex of the rectangle: "))
+   x3 = float(input("Enter the x coordinate of the third vertex of the rectangle: "))
+   y3 = float(input("Enter the y coordinate of the third vertex of the rectangle: "))
+   x4 = float(input("Enter the x coordinate of the third vertex of the rectangle: "))
+   y4 = float(input("Enter the y coordinate of the third vertex of the rectangle: "))
+   rectangle = Rectangle(Vertex(x1, y1), Vertex(x2, y2), Vertex(x3, y3), Vertex(x4, y4))
+   print("The vertices are: ", end="")
+   rectangle.get_shape_vertices()
+   print("The edges are: ", end="")
+   rectangle.get_shape_edges()
+   print("The inner angles are: ", end="")
+   rectangle.get_inner_angles()
+   print("The area of the rectangle is:", rectangle.get_area())
+   print("The perimeter of the rectangle is:", rectangle.get_perimeter())
+   print()
+
+

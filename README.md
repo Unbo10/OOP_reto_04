@@ -12,11 +12,13 @@ direction BT
     }
 
     class Edge {
-        + start_vertex: Vertex
-        + end_vertex: Vertex
+        + start: Vertex
+        + end: Vertex
         + length: float
-        + associated_line: Vectors
-        - compute_inner_angles(Edge): ~float~
+        + slope: float
+        + vector_end: Vertex
+        + vector_start: Vertex
+        - compute_slope(): float
     }
     Edge *-- Vertex
 
