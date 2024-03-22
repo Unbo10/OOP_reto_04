@@ -8,7 +8,7 @@ direction BT
     class Vertex {
         + x: int
         + y: int
-        + compute_distance(self, Vertex)
+        + calculate_vertex_distance(self, Vertex)
     }
 
     class Edge {
@@ -30,20 +30,21 @@ direction BT
         # inner_angles: list(float)
         # perimeter: float-abstract
         # area: float-abstract
+
+        # eliminate_repeated_vertices(~Vertex~): ~Vertex~
+        # sort_not_passed_vertices(Vertex, ~Vertex~): ~Vertex~
+        # get_max_and_min_x(self, ~Vertex~): ~Vertex~
+        # create_vertices(self, ~Vertex~): ~Vertex~
+        # create_edges(self): ~Edge~
+        # is_shape_regular(self): bool
+        # compute_area(self): void-abstract
+        # compute_perimeter(self): float
+        # compute_inner_angles(self) : ~float~
         + get_shape_vertices(self)
         + get_shape_edges(self)
         + get_inner_angles(self)
         + get_perimeter(self)
         + get_area(self)
-        # eliminate_repeated_vertices(~Vertex~)
-        # sort_not_passed_vertices(Vertex, ~Vertex~)
-        # create_vertices(self)
-        # create_edges(self)
-
-        # is_shape_regular(self): bool
-        # compute_area(self): void-abstract
-        # compute_perimeter(self): void-abstract
-        # compute_inner_angles(self) : ~float~
     }
 
     Shape *-- Edge
@@ -52,6 +53,8 @@ direction BT
     Rectangle --|> Shape
 
     class Triangle {
+        # create_vertices(self, ~Vertex~): ~Vertex~
+        # create_edges(self): ~Edge~
         # compute_perimeter(self): void-abstract
         # compute_area(self): void-abstract
     }
@@ -62,6 +65,7 @@ direction BT
 
 
     class Isosceles{
+        # compute_base_and_equal_edges(self): ~~Edge~~
         # compute_perimeter(self): float
         # compute_area(self): float
     }
